@@ -16,11 +16,13 @@ third-party API, so this package intentionally keeps the integration small and
 replaceable. If this becomes a public product, get permission or move to an
 official integration path.
 
-## Attribution
+## Attribution And Gratitude
 
 This project is an unofficial helper around [GoDaven](https://www.godaven.com/),
 the Worldwide Orthodox Minyan Database. It exists because GoDaven does the hard
 and communal work of collecting, maintaining, and presenting minyan information.
+Any useful work in this repository should point attention and appreciation back
+to the people and institutions who built and sustained the original service.
 
 Please credit and support the original project:
 
