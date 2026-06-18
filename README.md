@@ -16,6 +16,29 @@ third-party API, so this package intentionally keeps the integration small and
 replaceable. If this becomes a public product, get permission or move to an
 official integration path.
 
+## Attribution
+
+This project is an unofficial helper around [GoDaven](https://www.godaven.com/),
+the Worldwide Orthodox Minyan Database. It exists because GoDaven does the hard
+and communal work of collecting, maintaining, and presenting minyan information.
+
+Please credit and support the original project:
+
+- GoDaven site: https://www.godaven.com/
+- Founder / maintainer: Yosi Fishkin, MD, as credited by GoDaven.
+- Primary expansion / modernization backer: Klal Govoah, under the leadership
+  of Ira Zlotowitz, as described by GoDaven's About page.
+- Technology / rebuild partner: Bitbean, whose public case study describes its
+  work modernizing GoDaven's mobile search, GPS-based nearby minyan lookup,
+  dynamic rule/time-based schedule engine, crowdsourced updates, and temporary
+  minyanim.
+
+Sources:
+
+- GoDaven About: https://www.godaven.com/about
+- GoDaven homepage: https://www.godaven.com/
+- Bitbean case study: https://www.bitbean.com/case-studies/godaven-bitbean-helps-mobile-website-fuel-prayer/
+
 ## Install
 
 From a checkout:
