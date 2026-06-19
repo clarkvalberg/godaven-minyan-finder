@@ -1,5 +1,6 @@
 import unittest
 
+from godaven_minyan_finder.formatting import render_text
 from godaven_minyan_finder.godaven import normalize_radius_results, options_from_detail, titleize
 from godaven_minyan_finder.location import LocationError, location_from_provider_payload, resolve_location
 from godaven_minyan_finder.models import MinyanOption
@@ -68,6 +69,30 @@ class GoDavenTests(unittest.TestCase):
     def test_provider_payload_label_requires_geocode(self):
         with self.assertRaises(LocationError):
             location_from_provider_payload({"label": "Upper East Side"}, geocode=False)
+
+    def test_render_text_promotes_location_assumption(self):
+        loc = location_from_provider_payload(
+            {
+                "coordinate": {"latitude": 40.2, "longitude": -73.8, "accuracy_meters": 8.4},
+                "entity_name": "Clarks iPhone",
+                "freshness_text": "2026-06-19T21:04:56Z",
+                "source": "findmy_cache_devices",
+            }
+        )
+        option = MinyanOption(
+            shul_id=1,
+            shul_name="Test Shul",
+            address="1 Main St",
+            distance_miles=0.2,
+            tefillah="Shacharis",
+            time="7:00 AM",
+            location_status="confirmed",
+            source="test",
+        )
+        text = render_text(loc, [option])
+        self.assertIn("I’m using Clarks iPhone from Find My as your location", text)
+        self.assertIn("accuracy about 8 meters", text)
+        self.assertNotIn("Parsed from encrypted local Find My cache", text)
 
     def test_detail_rows_exclude_special_day_only_by_default(self):
         base = MinyanOption(
