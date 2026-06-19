@@ -61,7 +61,7 @@ class GoDavenTests(unittest.TestCase):
             }
         )
         self.assertEqual(loc.label, "Clarks iPhone")
-        self.assertIn("Current location came from Find My device: phone.", loc.caveats)
+        self.assertIn("Current location came from Find My device: Clarks iPhone.", loc.caveats)
         self.assertTrue(any("updated about" in caveat for caveat in loc.caveats))
         self.assertIn("Find My reported location accuracy about 8 meters.", loc.caveats)
 

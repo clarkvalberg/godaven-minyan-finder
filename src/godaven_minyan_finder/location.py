@@ -103,7 +103,7 @@ def location_from_provider_payload(payload: Dict[str, Any], *, geocode: bool = T
     longitude = coord.get("longitude", payload.get("longitude"))
     if latitude is not None and longitude is not None:
         caveats = list(payload.get("limitations") or [])
-        requester = payload.get("requester_device_alias") or payload.get("entity_name")
+        requester = payload.get("entity_name") or payload.get("requester_device_alias")
         if requester:
             caveats.append(f"Current location came from Find My device: {requester}.")
         freshness = _freshness_caveat(payload)
