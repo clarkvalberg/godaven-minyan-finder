@@ -120,6 +120,17 @@ or:
 }
 ```
 
+When `--near-me` is called from OpenClaw, prefer a requester-aware provider
+that resolves the inbound device or channel metadata before querying Find My:
+
+```bash
+export GODAVEN_LOCATION_PROVIDER_CMD='findmy-request-location --json --provider cache --privacy machine'
+```
+
+The provider may include `requester_device_alias` and `entity_name`; the CLI
+keeps those in the location caveats so the answer is clear about which Find My
+device supplied the coordinates.
+
 If the provider returns only `label` or `location_label`, the CLI geocodes that
 label and marks the result as approximate.
 

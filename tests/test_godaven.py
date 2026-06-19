@@ -54,10 +54,14 @@ class GoDavenTests(unittest.TestCase):
         loc = location_from_provider_payload(
             {
                 "coordinate": {"latitude": 40.2, "longitude": -73.8, "accuracy_meters": 8.4},
+                "entity_name": "Clarks iPhone",
+                "requester_device_alias": "phone",
                 "freshness_text": "2026-06-19T21:04:56Z",
                 "source": "findmy_cache_devices",
             }
         )
+        self.assertEqual(loc.label, "Clarks iPhone")
+        self.assertIn("Current location came from Find My device: phone.", loc.caveats)
         self.assertTrue(any("updated about" in caveat for caveat in loc.caveats))
         self.assertIn("Find My reported location accuracy about 8 meters.", loc.caveats)
 
