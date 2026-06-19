@@ -3,6 +3,7 @@ import os
 import re
 import shlex
 import subprocess
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -101,12 +102,19 @@ def location_from_provider_payload(payload: Dict[str, Any], *, geocode: bool = T
     latitude = coord.get("latitude", payload.get("latitude"))
     longitude = coord.get("longitude", payload.get("longitude"))
     if latitude is not None and longitude is not None:
+        caveats = list(payload.get("limitations") or [])
+        freshness = _freshness_caveat(payload)
+        if freshness:
+            caveats.append(freshness)
+        accuracy = _accuracy_caveat(coord)
+        if accuracy:
+            caveats.append(accuracy)
         return Location(
             latitude=float(latitude),
             longitude=float(longitude),
             label=payload.get("location_label") or payload.get("label") or "current location",
             source=payload.get("source") or "location_provider",
-            caveats=payload.get("limitations") or [],
+            caveats=caveats,
         )
 
     label = payload.get("location_label") or payload.get("label")
@@ -127,3 +135,27 @@ def location_from_provider_payload(payload: Dict[str, Any], *, geocode: bool = T
         )
 
     raise LocationError("Location provider returned no usable coordinates or location label.")
+
+
+def _accuracy_caveat(coord: Dict[str, Any]) -> Optional[str]:
+    accuracy = coord.get("accuracy_meters")
+    if accuracy is None:
+        return None
+    try:
+        meters = float(accuracy)
+    except (TypeError, ValueError):
+        return None
+    return f"Find My reported location accuracy about {meters:.0f} meters."
+
+
+def _freshness_caveat(payload: Dict[str, Any]) -> Optional[str]:
+    freshness_text = payload.get("freshness_text")
+    if not freshness_text:
+        return None
+    try:
+        observed = datetime.fromisoformat(str(freshness_text).replace("Z", "+00:00"))
+    except ValueError:
+        return f"Find My location timestamp: {freshness_text}."
+    age = datetime.now(timezone.utc) - observed.astimezone(timezone.utc)
+    minutes = max(0, round(age.total_seconds() / 60))
+    return f"Find My location was updated about {minutes} minutes ago."
