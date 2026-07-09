@@ -4,6 +4,7 @@ from godaven_minyan_finder.formatting import render_text
 from godaven_minyan_finder.godaven import normalize_radius_results, options_from_detail, titleize
 from godaven_minyan_finder.location import LocationError, location_from_provider_payload, resolve_location
 from godaven_minyan_finder.models import MinyanOption
+from godaven_minyan_finder.route import dedupe_nearby, haversine_miles, sample_coordinates
 
 
 class GoDavenTests(unittest.TestCase):
@@ -118,6 +119,23 @@ class GoDavenTests(unittest.TestCase):
         options = options_from_detail(base, detail, tefillah="mincha", target_day="wed")
         self.assertEqual(len(options), 1)
         self.assertEqual(options[0].time, "6:00 PM")
+
+    def test_route_sampling_keeps_endpoints(self):
+        coords = [(40.0 + index / 100, -74.0) for index in range(20)]
+        sampled = sample_coordinates(coords, max_samples=5)
+        self.assertEqual(sampled[0], coords[0])
+        self.assertEqual(sampled[-1], coords[-1])
+        self.assertLessEqual(len(sampled), 5)
+
+    def test_dedupe_nearby_removes_close_points(self):
+        coords = [(40.0, -74.0), (40.001, -74.0), (40.05, -74.0)]
+        deduped = dedupe_nearby(coords, min_miles=0.75)
+        self.assertEqual(deduped, [(40.0, -74.0), (40.05, -74.0)])
+
+    def test_haversine_miles_is_plausible(self):
+        distance = haversine_miles((40.0, -74.0), (40.01, -74.0))
+        self.assertGreater(distance, 0.6)
+        self.assertLess(distance, 0.8)
 
 
 if __name__ == "__main__":

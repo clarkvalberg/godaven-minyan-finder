@@ -81,6 +81,20 @@ Detailed schedule enrichment:
 godaven-minyan "389 E 89th St, New York" --tefillah mincha --details
 ```
 
+Route-aware minyan search:
+
+```bash
+godaven-minyan --near-me \
+  --destination "Flatbush, Brooklyn, NY" \
+  --tefillah mariv \
+  --route-aware
+```
+
+Route-aware mode resolves the origin and destination, asks a routing backend
+for the driving route, samples the route corridor, queries GoDaven near those
+sampled points, and scores candidates by detour minutes plus whether the user
+can arrive before the minyan with a configurable buffer.
+
 JSON for agents:
 
 ```bash
@@ -138,6 +152,8 @@ label and marks the result as approximate.
 
 - GoDaven web app endpoints are used for shul/minyan data.
 - Address lookup and coarse label lookup use OpenStreetMap Nominatim.
+- Route-aware mode uses the public OSRM demo server by default for driving
+  route geometry and approximate ETAs.
 - Set `GODAVEN_APP_ID` if you need to pin the app header; otherwise the CLI
   discovers the current value from GoDaven's public app bundle.
 
