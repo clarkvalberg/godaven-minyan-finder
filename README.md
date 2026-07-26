@@ -134,16 +134,18 @@ or:
 }
 ```
 
-When `--near-me` is called from OpenClaw, prefer a requester-aware provider
-that resolves the inbound device or channel metadata before querying Find My:
+For `--near-me`, use the provider-neutral Clark location service:
 
 ```bash
-export GODAVEN_LOCATION_PROVIDER_CMD='findmy-request-location --json --provider cache --privacy machine'
+export GODAVEN_LOCATION_PROVIDER_CMD='/Users/clarkvalberg/.local/bin/clark-location current --privacy machine --json'
 ```
 
-The provider may include `requester_device_alias` and `entity_name`; the CLI
-keeps those in the location caveats so the answer is clear about which Find My
-device supplied the coordinates.
+Find My is configured as the primary source and the OpenClaw iPhone app is the
+current-location fallback. The payload names the provider actually used and
+marks a fallback visibly. The CLI rejects a payload explicitly marked
+`usable: false`. It also consumes the centrally cached `address`,
+`neighborhood`, and `locality` fields, so GoDaven does not need a second
+reverse-geocoding path.
 
 If the provider returns only `label` or `location_label`, the CLI geocodes that
 label and marks the result as approximate.

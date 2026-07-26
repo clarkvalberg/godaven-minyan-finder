@@ -87,8 +87,11 @@ def resolve_near_me(*, geocode: bool = True, location_provider_cmd: Optional[str
             stderr=subprocess.PIPE,
             timeout=35,
         )
+    except subprocess.CalledProcessError as exc:
+        detail = (exc.stderr or exc.stdout or "").strip()
+        raise LocationError(f"Location provider failed: {detail or exc}") from exc
     except Exception as exc:
-        raise LocationError(f"Find My bridge failed: {exc}") from exc
+        raise LocationError(f"Location provider failed: {exc}") from exc
 
     try:
         payload = json.loads(completed.stdout)
@@ -98,24 +101,35 @@ def resolve_near_me(*, geocode: bool = True, location_provider_cmd: Optional[str
 
 
 def location_from_provider_payload(payload: Dict[str, Any], *, geocode: bool = True) -> Location:
+    if payload.get("usable") is False:
+        provider = payload.get("provider") or "location provider"
+        age = payload.get("age_seconds")
+        age_detail = f" ({round(float(age) / 60)} minutes old)" if isinstance(age, (int, float)) else ""
+        raise LocationError(f"{provider} returned a stale or unusable location{age_detail}.")
     coord = payload.get("coordinate") or {}
     latitude = coord.get("latitude", payload.get("latitude"))
     longitude = coord.get("longitude", payload.get("longitude"))
     if latitude is not None and longitude is not None:
         caveats = list(payload.get("limitations") or [])
         requester = payload.get("entity_name") or payload.get("requester_device_alias")
+        source = str(payload.get("source") or "")
+        provider = str(payload.get("provider") or "")
+        is_openclaw = source.startswith("openclaw_") or provider.startswith("openclaw")
+        source_label = "OpenClaw app" if is_openclaw else "Find My device"
         if requester:
-            caveats.append(f"Current location came from Find My device: {requester}.")
-        freshness = _freshness_caveat(payload)
+            caveats.append(f"Current location came from {source_label}: {requester}.")
+        freshness = _freshness_caveat(payload, is_openclaw=is_openclaw)
         if freshness:
             caveats.append(freshness)
-        accuracy = _accuracy_caveat(coord)
+        accuracy = _accuracy_caveat(coord, is_openclaw=is_openclaw)
         if accuracy:
             caveats.append(accuracy)
         return Location(
             latitude=float(latitude),
             longitude=float(longitude),
-            label=payload.get("location_label")
+            label=payload.get("address")
+            or payload.get("display_address")
+            or payload.get("location_label")
             or payload.get("label")
             or payload.get("entity_name")
             or payload.get("requester_device_alias")
@@ -144,7 +158,7 @@ def location_from_provider_payload(payload: Dict[str, Any], *, geocode: bool = T
     raise LocationError("Location provider returned no usable coordinates or location label.")
 
 
-def _accuracy_caveat(coord: Dict[str, Any]) -> Optional[str]:
+def _accuracy_caveat(coord: Dict[str, Any], *, is_openclaw: bool = False) -> Optional[str]:
     accuracy = coord.get("accuracy_meters")
     if accuracy is None:
         return None
@@ -152,17 +166,23 @@ def _accuracy_caveat(coord: Dict[str, Any]) -> Optional[str]:
         meters = float(accuracy)
     except (TypeError, ValueError):
         return None
+    if is_openclaw:
+        return f"OpenClaw app reported location accuracy about {meters:.0f} meters."
     return f"Find My reported location accuracy about {meters:.0f} meters."
 
 
-def _freshness_caveat(payload: Dict[str, Any]) -> Optional[str]:
+def _freshness_caveat(payload: Dict[str, Any], *, is_openclaw: bool = False) -> Optional[str]:
     freshness_text = payload.get("freshness_text")
     if not freshness_text:
         return None
+    prefix = "OpenClaw app location" if is_openclaw else "Find My location"
     try:
         observed = datetime.fromisoformat(str(freshness_text).replace("Z", "+00:00"))
     except ValueError:
-        return f"Find My location timestamp: {freshness_text}."
+        return f"{prefix} timestamp: {freshness_text}."
     age = datetime.now(timezone.utc) - observed.astimezone(timezone.utc)
     minutes = max(0, round(age.total_seconds() / 60))
-    return f"Find My location was updated about {minutes} minutes ago."
+    if minutes == 0:
+        return f"{prefix} was updated just now."
+    unit = "minute" if minutes == 1 else "minutes"
+    return f"{prefix} was updated about {minutes} {unit} ago."

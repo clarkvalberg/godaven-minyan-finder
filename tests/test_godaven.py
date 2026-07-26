@@ -71,6 +71,17 @@ class GoDavenTests(unittest.TestCase):
         with self.assertRaises(LocationError):
             location_from_provider_payload({"label": "Upper East Side"}, geocode=False)
 
+    def test_provider_payload_rejects_explicitly_unusable_fix(self):
+        with self.assertRaisesRegex(LocationError, "stale or unusable"):
+            location_from_provider_payload(
+                {
+                    "usable": False,
+                    "provider": "findmy",
+                    "age_seconds": 1200,
+                    "coordinate": {"latitude": 40.2, "longitude": -73.8},
+                }
+            )
+
     def test_render_text_promotes_location_assumption(self):
         loc = location_from_provider_payload(
             {
