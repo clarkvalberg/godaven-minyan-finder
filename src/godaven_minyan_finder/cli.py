@@ -15,6 +15,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--lng", type=float, help="Longitude.")
     parser.add_argument("--near-me", action="store_true", help="Use a configured local location provider command.")
     parser.add_argument(
+        "--max-stale-location-minutes",
+        type=int,
+        default=0,
+        help=(
+            "Allow a last-known coordinate up to this age for --near-me, while "
+            "labeling it as stale. Default: 0 (fresh fixes only)."
+        ),
+    )
+    parser.add_argument(
         "--location-provider-cmd",
         default="",
         help="Command that prints current-location JSON. Defaults to GODAVEN_LOCATION_PROVIDER_CMD.",
@@ -74,6 +83,7 @@ def main(argv=None) -> int:
             near_me=args.near_me,
             geocode=not args.no_geocode,
             location_provider_cmd=args.location_provider_cmd or None,
+            max_stale_age_seconds=max(0, args.max_stale_location_minutes) * 60,
         )
         if args.route_aware or args.destination:
             if not args.destination:

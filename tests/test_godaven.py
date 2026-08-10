@@ -1,9 +1,10 @@
 import unittest
+from unittest import mock
 
 from godaven_minyan_finder.formatting import render_text
 from godaven_minyan_finder.godaven import normalize_radius_results, options_from_detail, titleize
 from godaven_minyan_finder.location import LocationError, location_from_provider_payload, resolve_location
-from godaven_minyan_finder.models import MinyanOption
+from godaven_minyan_finder.models import Location, MinyanOption
 from godaven_minyan_finder.route import dedupe_nearby, haversine_miles, sample_coordinates
 
 
@@ -44,7 +45,8 @@ class GoDavenTests(unittest.TestCase):
                 "location_label": "near me",
                 "source": "test_provider",
                 "limitations": ["approximate"],
-            }
+            },
+            geocode=False,
         )
         self.assertEqual(loc.latitude, 40.2)
         self.assertEqual(loc.longitude, -73.8)
@@ -60,7 +62,8 @@ class GoDavenTests(unittest.TestCase):
                 "requester_device_alias": "phone",
                 "freshness_text": "2026-06-19T21:04:56Z",
                 "source": "findmy_cache_devices",
-            }
+            },
+            geocode=False,
         )
         self.assertEqual(loc.label, "Clarks iPhone")
         self.assertIn("Current location came from Find My device: Clarks iPhone.", loc.caveats)
@@ -82,6 +85,43 @@ class GoDavenTests(unittest.TestCase):
                 }
             )
 
+    def test_provider_payload_accepts_bounded_last_known_fix(self):
+        with mock.patch(
+            "godaven_minyan_finder.location.reverse_geocode_coordinate"
+        ) as reverse:
+            reverse.return_value = Location(
+                latitude=40.2,
+                longitude=-73.8,
+                label="100 Example Street, Brooklyn, NY",
+                source="nominatim_reverse",
+            )
+            loc = location_from_provider_payload(
+                {
+                    "usable": False,
+                    "provider": "findmy",
+                    "age_seconds": 10_800,
+                    "coordinate": {"latitude": 40.2, "longitude": -73.8},
+                    "entity_name": "Clarks iPhone",
+                    "source": "findmy_snapshot_devices",
+                },
+                max_stale_age_seconds=21_600,
+            )
+        self.assertEqual(loc.label, "100 Example Street, Brooklyn, NY")
+        self.assertTrue(any("last-known" in caveat for caveat in loc.caveats))
+        reverse.assert_called_once_with(40.2, -73.8)
+
+    def test_provider_payload_rejects_fix_older_than_bound(self):
+        with self.assertRaisesRegex(LocationError, "stale or unusable"):
+            location_from_provider_payload(
+                {
+                    "usable": False,
+                    "provider": "findmy",
+                    "age_seconds": 30_000,
+                    "coordinate": {"latitude": 40.2, "longitude": -73.8},
+                },
+                max_stale_age_seconds=21_600,
+            )
+
     def test_render_text_promotes_location_assumption(self):
         loc = location_from_provider_payload(
             {
@@ -89,7 +129,8 @@ class GoDavenTests(unittest.TestCase):
                 "entity_name": "Clarks iPhone",
                 "freshness_text": "2026-06-19T21:04:56Z",
                 "source": "findmy_cache_devices",
-            }
+            },
+            geocode=False,
         )
         option = MinyanOption(
             shul_id=1,
